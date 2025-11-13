@@ -98,6 +98,48 @@ if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
     TMP=$(mktemp)
     jq ".disk_config.device_modifications[0].partitions[$BIDX].start = {\"sector_size\": {\"unit\": \"B\", \"value\": 512}, \"unit\": \"MiB\", \"value\": ${ROOT_START_MIB}}" "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
   fi
+elif [ -f "$CONF_PATH" ]; then
+  python3 - "$CONF_PATH" "${XOS_ROOT_PERCENT:-100}" "${XOS_BOOT_SIZE_MIB:-}" << 'PY'
+import json,sys
+path=sys.argv[1]
+root_pct=int(sys.argv[2])
+boot_mib_arg=sys.argv[3]
+with open(path,'r',encoding='utf-8') as f:
+    data=json.load(f)
+dc=data.get('disk_config',{})
+mods=dc.get('device_modifications') or []
+if not mods:
+    print('NO_DEVICE_MODS')
+    sys.exit(0)
+dm=mods[0]
+parts=dm.get('partitions',[])
+bidx=next((i for i,p in enumerate(parts) if p.get('fs_type')=='btrfs'), None)
+fidx=next((i for i,p in enumerate(parts) if p.get('fs_type')=='fat32'), None)
+if bidx is not None:
+    parts[bidx]['size']={"sector_size":{"unit":"B","value":512},"unit":"Percent","value":root_pct}
+if fidx is not None and boot_mib_arg:
+    boot_mib=int(boot_mib_arg)
+    parts[fidx]['size']={"sector_size":{"unit":"B","value":512},"unit":"MiB","value":boot_mib}
+if bidx is not None and fidx is not None:
+    size=parts[fidx].get('size',{})
+    unit=size.get('unit')
+    val=int(size.get('value',0))
+    if unit in ('GiB','GIB','GiB'):
+        boot_mib=val*1024
+    elif unit in ('MiB','MIB','MiB'):
+        boot_mib=val
+    elif unit=='B':
+        boot_mib=val//1048576
+    else:
+        boot_mib=val
+    root_start_mib=boot_mib+1
+    parts[bidx]['start']={"sector_size":{"unit":"B","value":512},"unit":"MiB","value":root_start_mib}
+dm['partitions']=parts
+dc['device_modifications']=[dm]
+data['disk_config']=dc
+with open(path,'w',encoding='utf-8') as f:
+    json.dump(data,f,indent=4)
+PY
 fi
 
 INSTALL_OK=0
