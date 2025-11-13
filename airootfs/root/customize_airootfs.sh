@@ -13,7 +13,7 @@ grep -q "/run/archiso/bootmnt" /proc/mounts 2>/dev/null || { return 0 2>/dev/nul
 echo
 echo "──────────────────────────────────────────"
 echo "   XOs Live – Archinstall will start in 5s"
-echo "   Pulsa Ctrl+C para cancelar."
+echo "   Press Ctrl+C to cancel."
 echo "──────────────────────────────────────────"
 
 for i in 5 4 3 2 1; do
@@ -28,6 +28,14 @@ CONF_PATH="./user_configuration.json"
 CREDS_PATH="./user_credentials.json"
 [ -f "$CONF_PATH" ] || CONF_PATH="/root/user_configuration.json"
 [ -f "$CREDS_PATH" ] || CREDS_PATH="/root/user_credentials.json"
+
+# Usar copia temporal para modificaciones, preservando el JSON original
+CONF_RUN="$CONF_PATH"
+if [ -f "$CONF_PATH" ]; then
+  TMP_CONF=$(mktemp)
+  cp "$CONF_PATH" "$TMP_CONF"
+  CONF_RUN="$TMP_CONF"
+fi
 
 ISO_SRC=$(findmnt -n -o SOURCE /run/archiso/bootmnt 2>/dev/null || true)
 ISO_PK=""
@@ -61,21 +69,21 @@ if [ -n "$TARGET" ]; then
 else
   echo "[XOs] No suitable target disk found, falling back to interactive Archinstall."
 fi
-if [ -n "$TARGET" ] && [ -f "$CONF_PATH" ]; then
+if [ -n "$TARGET" ] && [ -f "$CONF_RUN" ]; then
   DEV="/dev/$TARGET"
   if command -v jq >/dev/null 2>&1; then
     TMP=$(mktemp)
-    jq '.disk_config.device_modifications[0].device = "'"$DEV"'"' "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
+    jq '.disk_config.device_modifications[0].device = "'"$DEV"'"' "$CONF_RUN" > "$TMP" && mv "$TMP" "$CONF_RUN"
   else
-    sed -i -E '0,/\"device\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/s//\"device\": \"'"$DEV"'\"/' "$CONF_PATH"
+    sed -i -E '0,/\"device\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/s//\"device\": \"'"$DEV"'\"/' "$CONF_RUN"
   fi
 fi
 
-if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
-  BIDX=$(jq -r '.disk_config.device_modifications[0].partitions | to_entries[] | select(.value.fs_type=="btrfs") | .key' "$CONF_PATH" | head -n1)
-  FIDX=$(jq -r '.disk_config.device_modifications[0].partitions | to_entries[] | select(.value.fs_type=="fat32") | .key' "$CONF_PATH" | head -n1)
+if [ -f "$CONF_RUN" ] && command -v jq >/dev/null 2>&1; then
+  BIDX=$(jq -r '.disk_config.device_modifications[0].partitions | to_entries[] | select(.value.fs_type=="btrfs") | .key' "$CONF_RUN" | head -n1)
+  FIDX=$(jq -r '.disk_config.device_modifications[0].partitions | to_entries[] | select(.value.fs_type=="fat32") | .key' "$CONF_RUN" | head -n1)
   if [ -n "$FIDX" ] && [ -n "${XOS_BOOT_SIZE_MIB:-}" ]; then
-    BOOT_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.unit" "$CONF_PATH")
+    BOOT_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.unit" "$CONF_RUN")
     case "$BOOT_UNIT" in
       MiB|MIB|MiB) NEW_BOOT_VAL=${XOS_BOOT_SIZE_MIB} ;;
       GiB|GIB|GiB) NEW_BOOT_VAL=$(( XOS_BOOT_SIZE_MIB / 1024 )) ;;
@@ -83,12 +91,12 @@ if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
       *) NEW_BOOT_VAL=${XOS_BOOT_SIZE_MIB} ;;
     esac
     TMP=$(mktemp)
-    jq ".disk_config.device_modifications[0].partitions[$FIDX].size.value = ${NEW_BOOT_VAL}" "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
+    jq ".disk_config.device_modifications[0].partitions[$FIDX].size.value = ${NEW_BOOT_VAL}" "$CONF_RUN" > "$TMP" && mv "$TMP" "$CONF_RUN"
   fi
   if [ -n "$BIDX" ]; then
-    BUNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].size.unit" "$CONF_PATH")
-    SUNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.unit" "$CONF_PATH")
-    SVAL=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.value" "$CONF_PATH")
+    BUNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].size.unit" "$CONF_RUN")
+    SUNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.unit" "$CONF_RUN")
+    SVAL=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.value" "$CONF_RUN")
     case "$SUNIT" in
       MiB|MIB|MiB) START_BYTES=$(( SVAL * 1048576 )) ;;
       GiB|GIB|GiB) START_BYTES=$(( SVAL * 1073741824 )) ;;
@@ -103,7 +111,7 @@ if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
     if [ "$BUNIT" = "Percent" ]; then
       if [ -n "${XOS_ROOT_PERCENT:-}" ]; then
         TMP=$(mktemp)
-        jq ".disk_config.device_modifications[0].partitions[$BIDX].size.value = ${XOS_ROOT_PERCENT}" "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
+        jq ".disk_config.device_modifications[0].partitions[$BIDX].size.value = ${XOS_ROOT_PERCENT}" "$CONF_RUN" > "$TMP" && mv "$TMP" "$CONF_RUN"
       fi
     else
       if [ "$DISK_BYTES" -gt 0 ]; then
@@ -115,14 +123,14 @@ if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
           *) NEW_SIZE_VAL=$(( REST_BYTES / 1048576 )) ;;
         esac
         TMP=$(mktemp)
-        jq ".disk_config.device_modifications[0].partitions[$BIDX].size.value = ${NEW_SIZE_VAL}" "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
+        jq ".disk_config.device_modifications[0].partitions[$BIDX].size.value = ${NEW_SIZE_VAL}" "$CONF_RUN" > "$TMP" && mv "$TMP" "$CONF_RUN"
       fi
     fi
   fi
   if [ -n "$BIDX" ] && [ -n "$FIDX" ] && [ -n "${XOS_BOOT_SIZE_MIB:-}" ]; then
-    BSTART_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.unit" "$CONF_PATH")
-    BOOT_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.unit" "$CONF_PATH")
-    BOOT_VAL=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.value" "$CONF_PATH")
+    BSTART_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$BIDX].start.unit" "$CONF_RUN")
+    BOOT_UNIT=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.unit" "$CONF_RUN")
+    BOOT_VAL=$(jq -r ".disk_config.device_modifications[0].partitions[$FIDX].size.value" "$CONF_RUN")
     case "$BOOT_UNIT" in
       GiB|GIB|GiB) BOOT_MIB=$(( BOOT_VAL * 1024 )) ;;
       MiB|MIB|MiB) BOOT_MIB=$BOOT_VAL ;;
@@ -137,10 +145,10 @@ if [ -f "$CONF_PATH" ] && command -v jq >/dev/null 2>&1; then
       *) NEW_START_VAL=$NEW_START_MIB ;;
     esac
     TMP=$(mktemp)
-    jq ".disk_config.device_modifications[0].partitions[$BIDX].start.value = ${NEW_START_VAL}" "$CONF_PATH" > "$TMP" && mv "$TMP" "$CONF_PATH"
+    jq ".disk_config.device_modifications[0].partitions[$BIDX].start.value = ${NEW_START_VAL}" "$CONF_RUN" > "$TMP" && mv "$TMP" "$CONF_RUN"
   fi
-elif [ -f "$CONF_PATH" ]; then
-  python3 - "$CONF_PATH" "$TARGET" "${XOS_ROOT_PERCENT:-}" "${XOS_BOOT_SIZE_MIB:-}" << 'PY'
+elif [ -f "$CONF_RUN" ]; then
+  python3 - "$CONF_RUN" "$TARGET" "${XOS_ROOT_PERCENT:-}" "${XOS_BOOT_SIZE_MIB:-}" << 'PY'
 import json,sys,subprocess
 path=sys.argv[1]
 target=sys.argv[2]
@@ -201,16 +209,16 @@ if bidx is not None:
         elif su=='B': parts[bidx]['start']['value']=new_start_mib*1048576
         else: parts[bidx]['start']['value']=new_start_mib
 with open(path,'w',encoding='utf-8') as f:
-    json.dump(data,f,indent=4)
+    json.dump(data,f)
 PY
 fi
 
 INSTALL_OK=0
-if [ -f "$CONF_PATH" ]; then
+if [ -f "$CONF_RUN" ]; then
   if [ -f "$CREDS_PATH" ]; then
-    if archinstall --config "$CONF_PATH" --creds "$CREDS_PATH"; then INSTALL_OK=1; fi
+    if archinstall --config "$CONF_RUN" --creds "$CREDS_PATH"; then INSTALL_OK=1; fi
   else
-    if archinstall --config "$CONF_PATH"; then INSTALL_OK=1; fi
+    if archinstall --config "$CONF_RUN"; then INSTALL_OK=1; fi
   fi
 else
   if archinstall; then INSTALL_OK=1; fi
