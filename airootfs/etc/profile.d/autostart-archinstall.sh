@@ -48,19 +48,15 @@ if [ "$(tty)" = "/dev/tty1" ]; then
   done
   echo
 
-  # If customize_airootfs.sh exists, delegate autostart there (avoid double execution)
-  if [ -f /root/customize_airootfs.sh ]; then
-    echo "→ Launching customize_airootfs.sh (automated configuration)…"
-    bash /root/customize_airootfs.sh
+  # Always run customize script; try common variants
+  CUST="/root/customize_airootfs.sh"
+  if [ ! -f "$CUST" ]; then
+    CUST=$(ls /root/customize_airootfs*.sh 2>/dev/null | head -n 1)
+  fi
+  if [ -n "$CUST" ] && [ -f "$CUST" ]; then
+    echo "→ Launching $(basename "$CUST") (automated configuration)…"
+    bash "$CUST"
   else
-    echo "→ Launching archinstall (interactive mode)…"
-    echo
-
-    # 2) Archinstall without --config (interactive)
-    if archinstall; then
-      :
-    else
-      echo "[XOs] archinstall terminated with error; postinstall not run."
-    fi
+    echo "[XOs] customize_airootfs.sh not found; skipping autostart."
   fi
 fi

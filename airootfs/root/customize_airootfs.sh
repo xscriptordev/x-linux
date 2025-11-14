@@ -67,7 +67,7 @@ fi
 if [ -n "$TARGET" ]; then
   echo "[XOs] Target disk selected: /dev/$TARGET"
 else
-  echo "[XOs] No suitable target disk found, falling back to interactive Archinstall."
+  echo "[XOs] No suitable target disk found; proceeding with config."
 fi
 if [ -n "$TARGET" ] && [ -f "$CONF_RUN" ]; then
   DEV="/dev/$TARGET"
@@ -284,18 +284,13 @@ if [ -f "$CONF_RUN" ]; then
 fi
 
 INSTALL_OK=0
-if [ -f "$CONF_RUN" ]; then
-  echo "[XOs] Using config: $CONF_RUN"
-  if [ -f "$CREDS_PATH" ]; then
-    echo "[XOs] Using creds: $CREDS_PATH"
-    if archinstall --config "$CONF_RUN" --creds "$CREDS_PATH"; then INSTALL_OK=1; fi
-  else
-    echo "[XOs] Credentials file not found at $CREDS_PATH, proceeding without creds."
-    if archinstall --config "$CONF_RUN"; then INSTALL_OK=1; fi
-  fi
+echo "[XOs] Using config: $CONF_RUN"
+if [ -f "$CREDS_PATH" ]; then
+  echo "[XOs] Using creds: $CREDS_PATH"
+  if archinstall --config "$CONF_RUN" --creds "$CREDS_PATH"; then INSTALL_OK=1; fi
 else
-  echo "[XOs] No config found, starting interactive Archinstall"
-  if archinstall; then INSTALL_OK=1; fi
+  echo "[XOs] Credentials file not found at $CREDS_PATH, proceeding without creds."
+  if archinstall --config "$CONF_RUN"; then INSTALL_OK=1; fi
 fi
 
 # Postinstall (branding xos)
