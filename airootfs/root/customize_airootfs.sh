@@ -284,14 +284,8 @@ if [ -f "$CONF_RUN" ]; then
 fi
 
 INSTALL_OK=0
-if [ -f "$CONF_RUN" ]; then
-  if [ -f "$CREDS_PATH" ]; then
-    if archinstall --config "$CONF_RUN" --creds "$CREDS_PATH"; then INSTALL_OK=1; fi
-  else
-    if archinstall --config "$CONF_RUN"; then INSTALL_OK=1; fi
-  fi
-else
-  if archinstall; then INSTALL_OK=1; fi
+if archinstall --config user_configuration.json --creds user_credentials.json; then
+  INSTALL_OK=1
 fi
 
 # Postinstall (branding xos)
