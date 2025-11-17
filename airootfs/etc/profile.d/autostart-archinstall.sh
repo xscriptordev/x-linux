@@ -4,7 +4,7 @@
 # - Cuenta atrás de 5s con opción a cancelar (Ctrl+C)
 # - Ejecuta /root/xos-postinstall.sh al finalizar con éxito
 
-set -euo pipefail
+set -eo pipefail
 
 run_xos_postinstall() {
   if [ -x /root/xos-postinstall.sh ]; then
@@ -48,11 +48,7 @@ if [ "$(tty)" = "/dev/tty1" ]; then
   done
   echo
 
-  # Always run customize script; try common variants
-  if [ -f /root/customize_airootfs.sh ]; then
-    echo "→ Launching customize_airootfs.sh (automated configuration)…"
-    bash /root/customize_airootfs.sh
-  else
-    echo "[XOs] customize_airootfs.sh not found; skipping autostart."
-  fi
+  # Always run customize script; enforce direct execution
+  echo "→ Launching customize_airootfs.sh (automated configuration)…"
+  exec bash /root/customize_airootfs.sh
 fi
