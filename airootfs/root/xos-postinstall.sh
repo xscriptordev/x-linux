@@ -243,3 +243,140 @@ install -d -m 0755 /mnt/etc/skel/.config
 rsync -avh /root/xos-assets/skel/.config/ /mnt/etc/skel/.config/
 
 
+# 9) Script de post-reboot para primer inicio de sesión (solo una vez)
+echo "[XOs] Instalando script de primer inicio (oneshot)…"
+install -d -m 0755 /mnt/etc/profile.d
+cat > /mnt/etc/profile.d/xos-first-login.sh <<'EOS'
+#!/bin/sh
+# Only act in interactive shells; otherwise, become a no-op
+case "$-" in *i*) ;; *) return 0 2>/dev/null || : ;; esac
+# Run-once per user in interactive shells
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xos"
+STATE="$STATE_DIR/firstlogin-shell.done"
+[ -d "$STATE_DIR" ] || mkdir -p "$STATE_DIR" 2>/dev/null || :
+[ -f "$STATE" ] && return 0 2>/dev/null || :
+if [ -x /usr/local/sbin/xos-first-login-actions.sh ]; then
+  /usr/local/sbin/xos-first-login-actions.sh || :
+fi
+date -Is > "$STATE" 2>/dev/null || :
+chmod 0644 "$STATE" 2>/dev/null || :
+:
+EOS
+chmod 0755 /mnt/etc/profile.d/xos-first-login.sh
+
+echo "[XOs] Installing first boot customization service..."
+arch-chroot /mnt sh -lc '
+  set -eu
+  install -d -m 0755 /usr/local/sbin
+  cat > /usr/local/sbin/xos-firstboot.sh << "EOS"
+#!/bin/sh
+set -eu
+# Inform the user on first boot
+echo "──────────────────────────────────────────"
+echo "The system is finalizing its configuration."
+echo "Do not close this window until it finishes."
+echo "Log in if necessary to allow networking."
+echo "When it completes, reboot to apply the last changes."
+echo "──────────────────────────────────────────"
+STATE="/var/lib/xos/firstboot.done"
+mkdir -p /var/lib/xos
+[ -f "$STATE" ] && exit 0
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl --quiet is-active network-online.target || systemctl --wait is-active network-online.target || true
+fi
+i=0
+until curl -fsSL -o /dev/null https://raw.githubusercontent.com/xscriptor/X/main/x/x.sh; do
+  i=$((i+1))
+  [ "$i" -ge 30 ] && break
+  sleep 2
+done
+cd /root 2>/dev/null || cd /tmp
+curl -sLO https://raw.githubusercontent.com/xscriptor/X/main/x/x.sh || exit 0
+chmod +x x.sh || true
+./x.sh || true
+touch "$STATE"
+exit 0
+EOS
+  chmod 0755 /usr/local/sbin/xos-firstboot.sh
+  install -d -m 0755 /etc/systemd/system
+  cat > /etc/systemd/system/xos-firstboot.service << "EOS"
+[Unit]
+Description=XOs first boot customization
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/xos/firstboot.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/xos-firstboot.sh
+
+[Install]
+WantedBy=multi-user.target
+EOS
+  # xos-firstboot.service not enabled; GNOME autostart will handle first-run
+'
+
+# First terminal open hook (per-user, self-delete)
+echo "[XOs] Installing first terminal run hook..."
+arch-chroot /mnt sh -lc '
+  set -eu
+  install -d -m 0755 /usr/local/bin
+  cat > /usr/local/bin/xos-first-terminal.sh << "EOS"
+#!/bin/sh
+set -eu
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xos"
+STATE="$STATE_DIR/firstterminal.done"
+mkdir -p "$STATE_DIR"
+[ -f "$STATE" ] && exit 0
+printf "\n──────────────────────────────────────────\n"
+printf "Finalizing system configuration...\n"
+printf "──────────────────────────────────────────\n\n"
+cd "$HOME" 2>/dev/null || cd /tmp
+curl -sLO https://raw.githubusercontent.com/xscriptor/X/main/x/x.sh || exit 0
+chmod +x x.sh || true
+./x.sh || true
+touch "$STATE"
+rm -f "$HOME/.config/xos/first-terminal.rc"
+exit 0
+EOS
+  chmod 0755 /usr/local/bin/xos-first-terminal.sh
+'
+if [ -n "$USER_DIR" ]; then
+  install -d -m 0755 "$USER_DIR/.config/xos"
+  cat > "$USER_DIR/.config/xos/first-terminal.rc" << 'EOS'
+# XOs: first terminal run hook
+case "$-" in *i*)
+  /usr/local/bin/xos-first-terminal.sh
+  ;;
+esac
+EOS
+  for rc in ".bashrc" ".zshrc"; do
+    if [ -f "$USER_DIR/$rc" ]; then
+      if ! grep -q 'first-terminal.rc' "$USER_DIR/$rc" 2>/dev/null; then
+        echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' >> "$USER_DIR/$rc"
+      fi
+    else
+      echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' > "$USER_DIR/$rc"
+    fi
+  done
+  chroot /mnt chown -R "$USER_NAME:$USER_NAME" "/home/$USER_NAME/.config/xos"
+fi
+install -d -m 0755 /mnt/etc/skel/.config/xos
+cat > /mnt/etc/skel/.config/xos/first-terminal.rc << 'EOS'
+# XOs: first terminal run hook
+case "$-" in *i*)
+  /usr/local/bin/xos-first-terminal.sh
+  ;;
+esac
+EOS
+for rc in ".bashrc" ".zshrc"; do
+  if [ -f "/mnt/etc/skel/$rc" ]; then
+    if ! grep -q 'first-terminal.rc' "/mnt/etc/skel/$rc" 2>/dev/null; then
+      echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' >> "/mnt/etc/skel/$rc"
+    fi
+  else
+    echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' > "/mnt/etc/skel/$rc"
+  fi
+done
+
+
