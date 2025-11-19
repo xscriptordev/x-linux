@@ -249,25 +249,20 @@ install -d -m 0755 /mnt/etc/profile.d
 cat > /mnt/etc/profile.d/xos-first-login.sh <<'EOS'
 #!/bin/sh
 set -eu
-# Ejecuta solo una vez en el primer inicio de sesión del sistema instalado
-MARKER_DIR="/etc/xos"
-MARKER_FILE="$MARKER_DIR/.first_login_done"
-
-# Si ya se ejecutó, salir
-if [ -f "$MARKER_FILE" ]; then
-  exit 0
-fi
+# Ejecuta solo una vez en el primer inicio de sesión (usuario)
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xos"
+STATE="$STATE_DIR/firstlogin-shell.done"
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+[ -f "$STATE" ] && exit 0
 
 # (Opcional) acciones adicionales si existe este script
 if [ -x /usr/local/sbin/xos-first-login-actions.sh ]; then
   /usr/local/sbin/xos-first-login-actions.sh || true
 fi
 
-# Marcar como completado y autodestruirse
-mkdir -p "$MARKER_DIR"
-date -Is > "$MARKER_FILE"
-chmod 0644 "$MARKER_FILE"
-rm -f /etc/profile.d/xos-first-login.sh
+# Marcar como completado (sin autodestruir)
+date -Is > "$STATE" 2>/dev/null || true
+chmod 0644 "$STATE" 2>/dev/null || true
 exit 0
 EOS
 chmod 0755 /mnt/etc/profile.d/xos-first-login.sh
@@ -332,8 +327,9 @@ arch-chroot /mnt sh -lc '
   cat > /usr/local/bin/xos-firstlogin.sh << "EOS"
 #!/bin/sh
 set -eu
-STATE="/var/lib/xos/firstlogin.done"
-mkdir -p /var/lib/xos
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xos"
+STATE="$STATE_DIR/firstlogin.done"
+mkdir -p "$STATE_DIR"
 [ -f "$STATE" ] && exit 0
 printf "\n──────────────────────────────────────────\n"
 printf "The system is finalizing its configuration.\n"
