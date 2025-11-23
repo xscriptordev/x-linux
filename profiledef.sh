@@ -9,7 +9,6 @@ iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
 bootmodes=('bios.syslinux'
-           'uefi.systemd-boot'
            'uefi.grub')
 packages_file="packages.x86_64"
 arch="x86_64"
