@@ -284,7 +284,7 @@ printf "\n───────────────────────�
 printf "   Finalizing XOs Configuration\n"
 printf "──────────────────────────────────────────\n\n"
 
-# Wait for internet connection (simple check)
+# Wait for internet connection
 printf "Waiting for internet connection..."
 i=0
 while ! ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1; do
@@ -309,59 +309,42 @@ fi
 # Mark as done so it doesn't run again
 touch "$STATE"
 
-# Remove the hook from the RC file to be clean
-if [ -f "$HOME/.config/xos/first-terminal.rc" ]; then
-    rm -f "$HOME/.config/xos/first-terminal.rc"
+# Remove the Autostart entry
+if [ -f "$HOME/.config/autostart/xos-firstboot.desktop" ]; then
+    rm -f "$HOME/.config/autostart/xos-firstboot.desktop"
 fi
 
 echo
 echo "XOs configuration finished."
+sleep 3
 exit 0
 EOS
 chmod +x /mnt/usr/local/bin/xos-first-terminal.sh
 
-# 8.2 Create the RC hook file
-install -d /mnt/etc/skel/.config/xos
-cat > /mnt/etc/skel/.config/xos/first-terminal.rc <<'EOS'
-# XOs: first terminal run hook
-case "$-" in *i*)
-  if [ -x /usr/local/bin/xos-first-terminal.sh ]; then
-    /usr/local/bin/xos-first-terminal.sh
-  fi
-  ;;
-esac
-EOS
+# 8.2 Create the XDG Autostart entry
+# We put it in skel so it is copied to new users, and can be deleted by the user script.
+install -d /mnt/etc/skel/.config/autostart
+cat > /mnt/etc/skel/.config/autostart/xos-firstboot.desktop <<EOF
+[Desktop Entry]
+Type=Application
+Name=XOs Setup
+Comment=Finalize XOs Installation
+Exec=ptyxis -- /usr/local/bin/xos-first-terminal.sh
+Icon=utilities-terminal
+Terminal=false
+StartupNotify=true
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
 
-# 8.3 Inject the source command into .bashrc / .zshrc in skel
-for rc in ".bashrc" ".zshrc"; do
-  RC_FILE="/mnt/etc/skel/$rc"
-  # Create if missing
-  [ -f "$RC_FILE" ] || touch "$RC_FILE"
-  
-  if ! grep -q 'first-terminal.rc' "$RC_FILE"; then
-    echo '' >> "$RC_FILE"
-    echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' >> "$RC_FILE"
-  fi
-done
-
-# 8.4 Apply to existing users (created by archinstall)
+# 8.3 Apply to existing users (created by archinstall)
 for user_home in /mnt/home/*; do
   [ -d "$user_home" ] || continue
   user_name=$(basename "$user_home")
   
-  install -d "$user_home/.config/xos"
-  cp /mnt/etc/skel/.config/xos/first-terminal.rc "$user_home/.config/xos/"
-  chown -R "$user_name:$user_name" "$user_home/.config/xos"
-  
-  for rc in ".bashrc" ".zshrc"; do
-    RC_FILE="$user_home/$rc"
-    [ -f "$RC_FILE" ] || touch "$RC_FILE"
-    if ! grep -q 'first-terminal.rc' "$RC_FILE"; then
-       echo '' >> "$RC_FILE"
-       echo '[ -f "$HOME/.config/xos/first-terminal.rc" ] && . "$HOME/.config/xos/first-terminal.rc"' >> "$RC_FILE"
-       chown "$user_name:$user_name" "$RC_FILE"
-    fi
-  done
+  install -d "$user_home/.config/autostart"
+  cp /mnt/etc/skel/.config/autostart/xos-firstboot.desktop "$user_home/.config/autostart/"
+  chown -R "$user_name:$user_name" "$user_home/.config/autostart"
 done
 
 echo "[XOs] Post-install finished successfully."
