@@ -4,7 +4,7 @@
 iso_name="XOs"
 iso_label="XOs_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Xscriptor <https://dev.xscriptor.com/XOs>"
-iso_application="Arch Linux Live/Rescue DVD"
+iso_application="X Live/Rescue DVD"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
