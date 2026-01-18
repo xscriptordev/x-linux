@@ -2,6 +2,12 @@ if grep -Fqa 'accessibility=' /proc/cmdline &> /dev/null; then
     setopt SINGLE_LINE_ZLE
 fi
 
-[ -x /root/.automated_script.sh ] && /root/.automated_script.sh
-[ -f /root/xos-autostart.sh ] && bash /root/xos-autostart.sh
-[ -f /root/xos-autostart.sh ] && bash /root/xos-autostart.sh
+# Run official automation if present (via kernel cmdline script=...)
+if [ -x /root/.automated_script.sh ]; then
+    /root/.automated_script.sh
+fi
+
+# Run XOs Autostart (Fallback/Default)
+if [ -f /root/xos-autostart.sh ]; then
+    bash /root/xos-autostart.sh
+fi
