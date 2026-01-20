@@ -34,6 +34,13 @@ X/
 
 ---
 
+## Archinstall Preconfiguration
+
+This ISO comes with a pre-configured `archinstall` profile (`user_configuration.json`) designed to speed up the installation process.
+*   **Note:** While completely automated, in some specific hardware cases you might need to manually **re-select the disk partitioning** layout during the setup wizard.
+
+---
+
 ## Building the ISO
 
 To build the X ISO image locally, ensure you have `archiso` installed.
@@ -64,9 +71,25 @@ out/
 
 ---
 
-## Post-installation Customization
+## Post-installation Customization (optional)
 
-X uses a **post-install script** to apply branding and configurations.  
+X uses a custom repository to manage branding and configurations automatically.
+
+### Option 1: Automated (Recommended)
+The **X repository** is pre-configured in the `pacman.conf` and `archinstall` configuration.
+If you need to add it manually to an existing system:
+
+```ini
+# X repo
+[x]
+SigLevel = Optional TrustAll
+Server = https://xscriptor.github.io/x-repo/repo/x86_64
+```
+
+With this repository enabled, the **post-install script is NO LONGER NECESSARY**, as the `x-release` package handles all branding (logo, names) automatically via hooks.
+
+### Option 2: Post-install Script (Fallback)
+If the repository is unreachable or you prefer a manual approach, you can still use the **post-install script**.  
 **Important:** This script must be run **immediately after installing Arch (via `archinstall` or manually) but BEFORE rebooting**, while your new system is still mounted at `/mnt`.
 
 1.  Run `archinstall` and complete the installation (do **not** reboot yet).
@@ -94,6 +117,10 @@ Once finished, you can safe reboot into your new X system.
 *   All configuration and assets required to reproduce the ISO are included.
 *   For development or debugging, you can modify files under `airootfs/` and rebuild.
 
+### Developer Resources
+For additional automation scripts and tools useful for developers, visit:
+[https://github.com/xscriptordev/x](https://github.com/xscriptordev/x)
+
 ---
 
 ## License
@@ -103,10 +130,9 @@ unless stated otherwise in subdirectories (e.g., artwork or third-party themes).
 
 ---
 
-## Author
 
-**Xscriptor**
-[github.com/xscriptor](https://github.com/xscriptor)
+
+[X](https://github.com/xscriptor)
 
 ---
 
