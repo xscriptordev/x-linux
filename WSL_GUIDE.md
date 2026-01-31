@@ -27,6 +27,22 @@ Move the tarball to a location accessible by Windows (e.g., `C:\Users\YourUser\D
 
 The built image is compressed with **Zstandard (.tar.zst)** for better compression. WSL does not support importing `.tar.zst` files directly. You need to decompress it first or pipe the content.
 
+### Option A: Simplified Import in the same folder of the file (Recommended)
+
+1. if you have wsl2 installed:
+
+```powershell
+wsl --import x C:\WSL\x x-2026.01.31.tar.zst
+```
+
+2. if you`re without wsl2 but also you want to specify this:
+
+```powershell
+wsl --import x C:\WSL\x x-2026.01.31.tar.zst --version 2
+```
+
+
+
 ### Option A: Decompress First (Recommended)
 
 1.  **Decompress** the file using a tool like [7-Zip](https://www.7-zip.org/) or `zstd` command line on Windows:
