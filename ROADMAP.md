@@ -1,10 +1,10 @@
 # X Distribution — Roadmap
 
-A comprehensive roadmap for completing the X Linux distribution based on Arch.
+A comprehensive roadmap for the X Linux distribution, an Arch-based spin with its own package repository.
 
 ---
 
-## Phase 1: Branding & Identity 
+## Phase 1: Branding & Identity <!-- phase:branding -->
 
 - [x] System identity (`/etc/os-release`)
 - [x] GRUB distributor name (`GRUB_DISTRIBUTOR="X"`)
@@ -15,24 +15,7 @@ A comprehensive roadmap for completing the X Linux distribution based on Arch.
 
 ---
 
-## Phase 2: Package Repository 
-
-### 2.1 Confirm Repository URL
-
-> **ACTION REQUIRED**: Choose your repository hosting:
-
-| Option | URL Format |
-|--------|------------|
-| GitHub Releases | `https://github.com/xscriptordev/x-repo/releases/download/latest/$arch` |
-| Custom Server | `https://repo.xscriptor.com/x/$arch` |
-| GitLab Pages | `https://xscriptordev.gitlab.io/x-repo/$arch` |
-
-**Current setting** in `pacman.conf`:
-```
-https://github.com/xscriptordev/x-repo/releases/download/latest/$arch
-```
-
-### 2.2 Package Tasks
+## Phase 2: Package Repository <!-- phase:package-repo -->
 
 - [x] Create `x-release` PKGBUILD
 - [x] Create install hooks
@@ -41,10 +24,11 @@ https://github.com/xscriptordev/x-repo/releases/download/latest/$arch
 - [ ] Create `x-repo` repository on GitHub
 - [ ] Upload package files to GitHub Releases (tag: `latest`)
 - [ ] Test ISO build with package
+- [ ] Migrate additional tools to the x repository
 
 ---
 
-## Phase 3: Installation Experience
+## Phase 3: Installation Experience <!-- phase:installation -->
 
 - [x] Archinstall configuration (`user_configuration.json`)
 - [x] Automated installation (`x-autostart.sh`)
@@ -54,7 +38,7 @@ https://github.com/xscriptordev/x-repo/releases/download/latest/$arch
 
 ---
 
-## Phase 4: Desktop Environment
+## Phase 4: Desktop Environment <!-- phase:desktop-env -->
 
 - [x] GNOME branding (wallpaper, GDM logo)
 - [x] KDE Plasma branding
@@ -65,7 +49,7 @@ https://github.com/xscriptordev/x-repo/releases/download/latest/$arch
 
 ---
 
-## Phase 5: Documentation & Website
+## Phase 5: Documentation & Website <!-- phase:docs -->
 
 - [ ] Landing page at `dev.xscriptor.com/x`
 - [ ] Installation guide
@@ -74,7 +58,7 @@ https://github.com/xscriptordev/x-repo/releases/download/latest/$arch
 
 ---
 
-## Phase 6: Release Pipeline
+## Phase 6: Release Pipeline <!-- phase:release -->
 
 - [ ] Automated ISO builds (GitHub Actions / GitLab CI)
 - [ ] Package signing with GPG
@@ -91,8 +75,11 @@ cd x-packages
 ./build-repo.sh
 
 # Build the ISO
-cd /home/x/Documents/repos/xscriptordev/x
+cd /path/to/x-linux
 ./xbuild.sh
+
+# Build a WSL tarball
+sudo ./xbuildwsl.sh
 ```
 
 ---
@@ -106,4 +93,5 @@ cd /home/x/Documents/repos/xscriptordev/x
 | `packages.x86_64` | Packages included in the ISO |
 | `airootfs/etc/os-release` | System identity |
 | `airootfs/etc/default/grub` | GRUB configuration |
-| `x-packages/x-release/` | Custom branding package |
+| `xbuild.sh` | ISO build script |
+| `xbuildwsl.sh` | WSL tarball build script |

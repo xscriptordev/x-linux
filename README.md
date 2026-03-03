@@ -1,7 +1,7 @@
 <h1 align="center"> X Linux </h1>
 
-**X** is a custom Arch Linux spin focused on simplicity, clean X branding, and reproducible builds.  
-This repository contains the full ArchISO profile and post-installation assets used to generate the official X Linux ISO image.
+**X** is a custom Arch Linux spin focused on simplicity, clean branding, and reproducible builds.  
+It ships its own package repository ([x-repo](https://github.com/xscriptordev/x-repo)) so you can install X-specific packages directly with `pacman`, and more tools will be migrated there over time.
 
 > **Project status:** Under active development  
 
@@ -9,47 +9,80 @@ This repository contains the full ArchISO profile and post-installation assets u
 
 ## Overview
 
-X aims to provide a minimal yet polished Arch-based system with its own identity and branding.  
-It is built entirely from official Arch repositories, using the standard `mkarchiso` workflow with a custom profile definition and post-install scripts.
+X provides a minimal yet polished Arch-based system with its own identity.  
+It is built with the standard `mkarchiso` workflow, layering a custom profile, branding assets, and post-install automation on top of official Arch repositories.
+
+### Key Features
+
+- **Custom branding** — `/etc/os-release`, GRUB, MOTD, wallpapers, and logos all carry the X identity.
+- **X package repository** — A dedicated `[x]` repo in `pacman.conf` delivers the `x-release` branding package (and future tools) via `pacman`.
+- **Preconfigured archinstall** — Ships a `user_configuration.json` so installation is nearly hands-free.
+- **Post-install automation** — `x-postinstall.sh` applies branding to GNOME, KDE Plasma, XFCE, GDM, SDDM, and LightDM.
+- **WSL support** — Build a WSL-importable tarball with `xbuildwsl.sh`.
+- **Multiple desktop environments** — Branding preconfigured for GNOME, KDE Plasma, and XFCE.
 
 ---
 
 ## Project Structure
 
 ```
-X/
+x-linux/
 ├── profiledef.sh             # ArchISO profile definition
-├── pacman.conf               # Custom package configuration
+├── pacman.conf               # Package manager config (includes [x] repo)
 ├── packages.x86_64           # Package list for ISO build
-├── airootfs/                 # Root filesystem (customized ArchISO overlay)
+├── airootfs/                 # Root filesystem overlay
+│   ├── etc/
+│   │   ├── os-release        # X system identity
+│   │   ├── default/grub      # GRUB configuration (GRUB_DISTRIBUTOR="X")
+│   │   ├── motd              # Message of the Day
+│   │   ├── dconf/            # GNOME/GDM branding (wallpaper, login logo)
+│   │   └── pacman.d/hooks/   # Branding hooks for x-release package
 │   ├── root/
-│   │   ├── x-assets/       # Branding assets dir
-│   │   ├── x-postinstall.sh # Main post-installation script
-│   │   └── ...
-│   └── ...
-├── xbuild.sh                 # Automated build script
+│   │   ├── x-autostart.sh    # Automated installation script
+│   │   ├── x-postinstall.sh  # Post-install branding (GNOME/KDE/XFCE)
+│   │   └── user_configuration.json  # Archinstall preset
+│   └── usr/local/share/      # Wallpapers, logos, and assets
+├── xbuild.sh                 # Build ISO locally
+├── xbuildwsl.sh              # Build WSL tarball
 ├── x.sh                      # Quick rebuild/clean script
-└── .gitignore
+├── WSL_GUIDE.md              # Guide for importing into WSL
+└── roadmap.md                # Project roadmap
 ```
 
 ---
 
-## Archinstall Preconfiguration
+## The X Repository
 
-This ISO comes with a pre-configured `archinstall` profile (`user_configuration.json`) designed to speed up the installation process.
-*   **Note:** While completely automated, in some specific hardware cases you might need to manually **re-select the disk partitioning** layout during the setup wizard.
+X ships a custom pacman repository that provides branding and utility packages.  
+Currently the repo includes `x-release`, and more tools will be migrated here over time.
+
+The repository is pre-configured in `pacman.conf`:
+
+```ini
+[x]
+SigLevel = Optional TrustAll
+Server = https://xscriptor.github.io/x-repo/repo/x86_64
+```
+
+To add it to an existing Arch installation, append the block above to `/etc/pacman.conf` and run:
+
+```bash
+sudo pacman -Sy x-release
+```
+
+With the repository enabled, the `x-release` package handles all branding automatically via pacman hooks — the post-install script is no longer necessary.
 
 ---
 
 ## Building the ISO
 
-To build the X ISO image locally, ensure you have `archiso` installed.
+Install `archiso`:
 
 ```bash
 sudo pacman -S archiso
 ```
 
-Then run the included build script:
+Then run:
 
 ```bash
 ./xbuild.sh
@@ -57,12 +90,12 @@ Then run the included build script:
 
 The script will:
 
-1.  Unmount any stale mounts from previous builds.
-2.  Clean the `work/` and `out/` directories.
-3.  Run `mkarchiso` with the provided configuration.
-4.  Store the resulting `.iso` image inside `./out/`.
+1. Unmount any stale mounts from previous builds.
+2. Clean the `work/` and `out/` directories.
+3. Run `mkarchiso` with the provided configuration.
+4. Store the resulting `.iso` image inside `./out/`.
 
-Example output:
+Output:
 
 ```
 out/
@@ -71,81 +104,58 @@ out/
 
 ---
 
-## Build for WSL (Windows Subsystem for Linux)
+## Building for WSL
 
-To create a tarball compatible with WSL:
+To create a tarball compatible with Windows Subsystem for Linux:
 
 ```bash
 sudo ./xbuildwsl.sh
 ```
 
-This will produce `out-wsl/x-YYYY.MM.DD.tar.gz`. For instructions on how to import and use this in Windows, see [WSL_GUIDE.md](./WSL_GUIDE.md).
+This produces `out-wsl/x-YYYY.MM.DD.tar.gz`.  
+See [WSL_GUIDE.md](./WSL_GUIDE.md) for import instructions.
 
 ---
 
-## Post-installation Customization (optional)
+## Archinstall Preconfiguration
 
-X uses a custom repository to manage branding and configurations automatically.
+The ISO includes a pre-configured `archinstall` profile (`user_configuration.json`) for a streamlined installation.
 
-### Option 1: Automated (Recommended)
-The **X repository** is pre-configured in the `pacman.conf` and `archinstall` configuration.
-If you need to add it manually to an existing system:
+> **Note:** On some hardware you may need to manually re-select the disk partitioning layout during the setup wizard.
 
-```ini
-# X repo
-[x]
-SigLevel = Optional TrustAll
-Server = https://xscriptor.github.io/x-repo/repo/x86_64
-```
+---
 
-With this repository enabled, the **post-install script is NO LONGER NECESSARY**, as the `x-release` package handles all branding (logo, names) automatically via hooks.
+## Post-installation (Fallback)
 
-### Option 2: Post-install Script (Fallback)
-If the repository is unreachable or you prefer a manual approach, you can still use the **post-install script**.  
-**Important:** This script must be run **immediately after installing Arch (via `archinstall` or manually) but BEFORE rebooting**, while your new system is still mounted at `/mnt`.
-
-1.  Run `archinstall` and complete the installation (do **not** reboot yet).
-2.  Exit `archinstall` to the shell.
-3.  Execute the post-install script located in `/root`:
+If the X repository is unreachable, you can apply branding manually with the post-install script.  
+**Run this right after `archinstall` finishes, before rebooting** (while the new system is still mounted at `/mnt`):
 
 ```bash
-/root/X-postinstall.sh
+/root/x-postinstall.sh
 ```
 
-This script will:
-
-*   Configure `/etc/os-release` (identity).
-*   Install wallpapers, logos, and branding for GNOME/KDE/XFCE.
-*   Setup initial user configurations (skel).
-*   Customize the bootloader (GRUB/systemd-boot).
-
-Once finished, you can safe reboot into your new X system.
+This configures `/etc/os-release`, wallpapers, logos, and bootloader entries for the installed desktop environment.
 
 ---
 
 ## Notes
 
-*   The repository ignores build outputs (`work/`, `out/`, logs) for cleaner commits.
-*   All configuration and assets required to reproduce the ISO are included.
-*   For development or debugging, you can modify files under `airootfs/` and rebuild.
+- Build outputs (`work/`, `out/`, logs) are git-ignored.
+- All configuration and assets needed to reproduce the ISO are included in the repository.
+- For development or debugging, modify files under `airootfs/` and rebuild.
 
 ### Developer Resources
-For additional automation scripts and tools useful for developers, visit:
+
+For additional automation scripts and tools, visit:  
 [https://github.com/xscriptordev/x](https://github.com/xscriptordev/x)
 
 ---
 
 ## License
 
-All build scripts and configuration files are released under the MIT License,
+All build scripts and configuration files are released under the MIT License,  
 unless stated otherwise in subdirectories (e.g., artwork or third-party themes).
 
 ---
 
-
-
 [X](https://github.com/xscriptor)
-
----
-
-
