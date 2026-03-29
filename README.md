@@ -72,6 +72,14 @@ sudo pacman -Sy x-release
 
 With the repository enabled, the `x-release` package handles all branding automatically via pacman hooks — the post-install script is no longer necessary.
 
+For `.xp` packages consumed by `xpm`, use the parallel endpoint:
+
+```
+https://xscriptor.github.io/x-repo/x/$arch
+```
+
+`pacman` sigue usando `https://xscriptor.github.io/x-repo/repo/x86_64`; `xpm` debe apuntar a `https://xscriptor.github.io/x-repo/x/$arch` para evitar mezclar formatos.
+
 ---
 
 ## Building the ISO
