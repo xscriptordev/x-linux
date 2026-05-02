@@ -17,6 +17,7 @@
   <a href="#project-status">Project Status</a> •
   <a href="#project-composition">Project Composition</a> •
   <a href="#quick-start">Quick Start</a> •
+  <a href="#related-repos">Related Repositories</a> •
   <a href="#related-documents">Related Documents</a> •
   <a href="#x">X</a>
 </p>
@@ -83,6 +84,16 @@
 <p>Output: <code>./out-wsl/x-YYYY.MM.DD.tar.gz</code> (or <code>.tar.zst</code> when using <code>xbuildwslc.sh</code>).</p>
 
 <hr />
+
+<h2 align="center" id="related-repos"> Related Repositories </h2>
+
+<ul>
+  <li><a href="https://github.com/xscriptor/x">x:</a> scripts post install to set up xdev environment.</li>
+  <li><a href="https://github.com/xscriptor/x-repo">x-repo:</a> X package repository for x.</li>
+  <li><a href="https://github.com/xscriptor/xfetch">xfetch:</a> official getter for system information created on rust for X but now running in any distro.</li>
+  <li><a href="https://github.com/xscriptor/xpm">xpm:</a> X package manager for x.</li>
+  <li><a href="https://github.com/xscriptor/xpkg">xpkg:</a> X packager for x developers.</li>
+</ul>
 
 <h2 align="center" id="related-documents"> Related Documents </h2>
 
